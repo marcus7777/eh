@@ -1,13 +1,3 @@
-<!--
-@license
-Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
-The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
-The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
-Code distributed by Google as part of the polymer project is also
-subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
--->
-
 <!doctype html>
 <html lang="">
 
@@ -57,9 +47,368 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 <body unresolved class="fullbleed layout vertical">
   <span id="browser-sync-binding"></span>
-  <template is="dom-bind" id="app">
-     <site-list></site-list>
+<dom-module id='url-value'> 
+  <script>
+  (function() {
+    function isEmpty(obj) {
+      for(var prop in obj) {
+        if(obj.hasOwnProperty(prop)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    Polymer({
+      is: 'url-value', // CONVERTED WIP 
+      properties: {
+        values:{
+          type: Object,
+          notify: true
+        }
+      },
+      valuesChanged:function(oldValues,newValues) { console.log('values Changed');console.log(this.values);
+        if (!isEmpty(oldValues) && !isEmpty(newValues)) {
+         // http://stackoverflow.com/questions/6566456/how-to-serialize-a-object-into-a-list-of-parameters
+         // TODO add array in url possibilty 
+          var str = "";
+          for (var key in newValues) {
+            if (str != "") {
+              str += "&"; // &
+            }
+            str += key + "=" + encodeURIComponent(newValues[key]); //=
+          }
+          if (this.hash !== false) {
+            window.history.pushState(newValues,"", '#'+str);
+            } else {
+            window.history.pushState(newValues,"", '?'+str);
+          }
+        }
+      }, 
+      ready: function() { console.log('url-value ready');
+        // http://stackoverflow.com/questions/8486099/how-do-i-parse-a-url-query-parameters-in-javascript
+        var query;
+        var pos = location.href.indexOf("#");
+        if(pos==-1) {
+          query = location.search.substr(1);
+          this.hash = false;
+          } else {
+          query = location.href.substr(pos+1);
+        }
+        var result = {};
+        query.split("&").forEach(function(part) {
+          if (part) {
+            isPair = query.indexOf("=");
+            if (isPair==-1) {
+              result = decodeURIComponent(part).split("/");
+              this.args = true;
+              } else {
+              var item = part.split("=");
+              var key = item[0];
+              var from = key.indexOf("[");
+              if(from==-1) {
+                result[key] = decodeURIComponent(item[1]);
+                } else {
+                var to = key.indexOf("]");
+                var index = key.substring(from+1,to);
+                key = key.substring(0,from);
+                if(!result[key]) {
+                  result[key] = [];
+                }
+                if(!index) {
+                  result[key].push(item[1]);
+                  } else {
+                  result[key][index] = item[1];
+                }
+              }
+            }
+          }
+        });
+        console.log(result);
+        this.values = result;
+      }
+    });
+  })();
+  </script>
+</dom-module>
+  <dom-module id="get-hash">
+
+    <template>
+      <google-map-search id="googleMapSearch" map="{{map}}" query="{{location}}" result="{{result}}">
+        
+      </google-map-search>
+    </template>
+    
+    <script>
+      
+(function() {
+  
+  Polymer({
+    is: 'get-hash',
+    properties: {
+      hash: {
+        type: String,
+        notify: true
+      },
+      location: {
+        type: String
+      },
+      map:Object,
+      result:Object
+    },
+    geoHash: function(lng,lat) {
+      return encodeGeoHash(+lng, +lat);
+    },
+    observers: ['resultChanged(result)'],
+    resultChanged: function(newValue) {
+      if (newValue !== null) {
+        this.hash = this.geoHash(newValue.latitude, newValue.longitude);
+        this.map.setCenter({lat: newValue.latitude, lng: newValue.longitude});
+        console.log(this.hash);
+      }
+    }
+  });
+  
+})();
+    </script>
+  </dom-module>
+  <dom-module id='paper-filter'> 
+
+  <style>
+    :host {
+      max-height: 98px;
+      display: block;
+      overflow: hidden;
+    }
+  paper-button {
+    background: #fff;
+    min-width: 172px;
+    margin: 0px 2px 6px;
+  }
+  .mini-badge {
+    display: inline-block;
+    min-width: 10px;
+    padding: 3px 7px;
+    font-size: 12px;
+    font-weight: 100;
+    color: #FFF;
+    line-height: 1.2;
+    vertical-align: baseline;   
+    background-color: #6F6F6F;
+    border-radius: 10px;
+  }
+  </style>
+
+<template>
+  <template is="dom-repeat" items="{{filters}}" as="x" >
+     <paper-button raised="{{!x.filtered}}" on-tap="setFilter" title="{{x.name}}">
+        <span>{{x.name}}</span> <span class="mini-badge">{{x.num}}</span>
+     </paper-button>
   </template>
+</template>
+
+<script>
+(function() {
+  function hasTypes (data,types) {
+    for (var key in types) {
+      if (types.hasOwnProperty(key)) {
+        var obj = types[key];
+        for (var prop in obj) {
+          if(obj.hasOwnProperty(prop)){
+            if (data.hasOwnProperty(key)) {
+              if (obj[prop]) {
+                if (data[key].indexOf(prop) === -1 ) {
+                  return false;
+                }
+              } else {
+                if (data[key].indexOf(prop) !== -1 ) {
+                  return false;
+                }
+              }
+            } else {
+              return false;
+            }
+          }
+        }
+      }
+    }
+    return true;
+  }
+  function isEmpty(obj) {
+    for(var prop in obj) {
+      if(obj.hasOwnProperty(prop)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  Polymer({
+    is: 'paper-filter',
+    properties: {
+      filters: {
+        type: Array
+      },
+      obj_filters: {
+        type: Object,
+        value: {}
+      },
+      by: {
+        type: String
+      },
+      output: {
+        type: Array,
+        notify: true
+      },
+      data: {
+        type: Array
+      },
+      max:{
+        type: String 
+      }
+    },
+    observers: ['outputChanged(data.*)'],
+    outputChanged: function(data) {
+      this.filters = this.justProperties(this.data, this.by);
+      this.output = this.data;
+    },
+    justProperties: function(data, properties) {
+      console.log('justProperties');
+      var output = [];
+      var outputNum = [];
+      if (data !== undefined && data !== null && Array.isArray(data) && data.length > 1) {
+        var test = function(entryA) {
+          if (output.indexOf(entryA) === -1) {
+            output.push(entryA);
+            outputNum.push(1);
+          } else {
+            outputNum[output.indexOf(entryA)]++;
+          }
+        };
+        for (var i = 0, l = data.length; i < l; i++) {
+          if (data[i][properties] === undefined) continue;
+          if (Array.isArray(data[i][properties])) {
+            for (var b = 0, c = data[i][properties].length; b < c; b++) {
+              test(data[i][properties][b]);
+            }
+          } else {
+            test(data[i][properties]);
+          }
+        }
+      }
+      var result = [];
+      for (var a = 0, x = output.length; a < x; a++) {
+        result[a] = {
+          name: output[a],
+          num: outputNum[a],
+          filtered: this.ifFiltered(output[a], properties)
+        };
+      }
+      result.sort(function(a, b) {
+        return b.num - a.num;
+      });
+      
+      console.log(result);
+      return result;
+    },
+    ifFiltered: function(name, properties) {
+      if (this.obj_filters.hasOwnProperty(properties)) {
+        if (this.obj_filters[properties].hasOwnProperty(name)) {
+          return this.obj_filters[properties][name];
+        } else {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    },
+    justOfTypes: function(data, obj_filters){ 
+      if (data === null || data === undefined) {
+        return [];
+      }
+      if (obj_filters === undefined || isEmpty(obj_filters)) {
+        return data;
+      } else {
+        var output = [];
+        for (var entry = 0, l = data.length; entry < l; entry++) {
+          if (hasTypes(data[entry],obj_filters)) {
+            output.push(data[entry]); 
+          }
+        };
+        return output;
+      }
+    },
+    setFilter: function(e) {
+      var title  = e.currentTarget.getAttribute('title');
+      
+      if (this.obj_filters.hasOwnProperty(this.by)) {
+        if (this.obj_filters[this.by].hasOwnProperty(title)) {
+          delete this.obj_filters[this.by][title];
+          if (isEmpty(this.obj_filters[this.by])) {
+            delete this.obj_filters[this.by];
+          }
+        } else {
+          if (+this.max === 1) {
+            this.obj_filters[this.by] = {};
+          }
+          this.obj_filters[this.by][title] = true;
+        }
+      } else {
+        if (this.obj_filters === undefined) {
+          this.obj_filters = {};
+        }
+        this.obj_filters[this.by] = {};
+        this.obj_filters[this.by][title] = true;
+      }
+      
+      this.filters = this.justProperties(this.data, this.by);
+      this.output = this.justOfTypes(this.data, this.obj_filters);
+    }
+  });
+})();
+</script>
+</dom-module>
+      <style>
+     google-map {
+       height: 100px;
+     }
+    </style>
+  
+  <template is="dom-bind" id="app">
+    <url-value values="{{url}}" ></url-value>
+
+    <h1>{{url.search}}</h1>
+    
+    <get-hash location="{{url.search}}" map="{{map}}" hash="{{hash}}"></get-hash>
+    <google-map map="{{map}}" id="map"></google-map>
+    <get-geo-data
+       location="https://essential-map.firebaseio.com/geo"
+       geo="{{hash}}" 
+       data="{{data}}" >
+    </get-geo-data>
+    <h1>{{hash}}</h1>
+    <paper-filter by="type" data="{{data}}" output="{{data_by_type}}">
+      
+    </paper-filter>
+    
+    <paper-filter by="facilities" data="{{data_by_type}}" output="{{data_by_t_and_f}}">
+      
+    </paper-filter>
+
+    <template is="dom-repeat" items="{{data_by_t_and_f}}" as="card">
+      <a href="{{card.url}}" title="{{card.value}}" >
+        <paper-material>
+          <div class="body1" style="float: left;width:250px">
+            <h3>{{card.value}}</h3>
+            <span>{{card.title}}</span>
+            <span>more infomation</span>
+          </div>
+          
+          <!-- <iron-image sizing="cover" src="https://sdyrcs.cloudimage.io/s/crop/120x120/{{card.image}}" style="width:100px; height:100px;"></iron-image> -->
+          <iron-image sizing="cover" src="{{card.image}}" style="float: right;width:100px; height:100px;"></iron-image>
+        </paper-material>
+      </a>
+    </template>
+  </template>
+  
 
 </body>
 
